@@ -198,11 +198,28 @@
             text-align: left;
             font-weight: bold;
             font-size: 1.1em;
+            white-space: nowrap;
         }
 
         .comparison-table td {
             padding: 20px;
             border-bottom: 1px solid #dee2e6;
+            white-space: nowrap;
+        }
+        
+        .comparison-table td:first-child {
+            min-width: 150px;
+        }
+        
+        .comparison-table td:nth-child(3),
+        .comparison-table td:nth-child(4),
+        .comparison-table td:nth-child(5) {
+            min-width: 200px;
+        }
+        
+        .comparison-table td:last-child {
+            white-space: normal;
+            min-width: 250px;
         }
 
         .comparison-table tbody tr:hover {
