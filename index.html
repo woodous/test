@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麥當勞點數兌換分析 - 智能推薦系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+            background: linear-gradient(135deg, #FFC300 0%, #FFE066 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #DA291C 0%, #FF6B6B 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+
+        .input-section {
+            background: linear-gradient(135deg, #FFC300 0%, #FFD700 100%);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .input-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .input-wrapper label {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #DA291C;
+        }
+
+        .input-wrapper input {
+            font-size: 2em;
+            padding: 15px 25px;
+            border: 3px solid #DA291C;
+            border-radius: 15px;
+            width: 250px;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #FF6B6B;
+            box-shadow: 0 0 20px rgba(218, 41, 28, 0.3);
+            transform: scale(1.05);
+        }
+
+        .input-wrapper span {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #DA291C;
+        }
+
+        .result-section {
+            padding: 40px;
+            display: none;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 3px solid #DA291C;
+        }
+
+        .result-card h2 {
+            color: #DA291C;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            background: #DA291C;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+
+        .recommendation {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 5px solid #FFC300;
+        }
+
+        .recommendation h3 {
+            color: #DA291C;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+
+        .recommendation p {
+            color: #333;
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+
+        .status-box {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-box.insufficient {
+            background: linear-gradient(135deg, #ffc107 0%, #ffca2c 100%);
+            color: #333;
+        }
+
+        .table-section {
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .table-section h2 {
+            color: #DA291C;
+            font-size: 2em;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .comparison-table thead {
+            background: linear-gradient(135deg, #DA291C 0%, #FF6B6B 100%);
+            color: white;
+        }
+
+        .comparison-table th {
+            padding: 20px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .comparison-table td {
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .comparison-table tbody tr:hover {
+            background: #fff3cd;
+            cursor: pointer;
+        }
+
+        .comparison-table tbody tr.highlight {
+            background: linear-gradient(135deg, #FFE066 0%, #FFC300 100%);
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .range-badge {
+            background: #DA291C;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .stars {
+            color: #FFC300;
+            font-size: 1.3em;
+        }
+
+        .strategy {
+            font-style: italic;
+            color: #666;
+        }
+
+        .footer {
+            background: #DA291C;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .input-wrapper input {
+                width: 180px;
+                font-size: 1.5em;
+            }
+
+            .comparison-table {
+                font-size: 0.9em;
+            }
+
+            .comparison-table th,
+            .comparison-table td {
+                padding: 10px;
+            }
+        }
+
+        .highlight-marker {
+            background: #DA291C;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.9em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍟 麥當勞點數兌換分析</h1>
+            <p>智能推薦系統 - 幫你找到最划算的兌換方案</p>
+        </div>
+
+        <div class="input-section">
+            <div class="input-wrapper">
+                <label for="pointsInput">👉 我有</label>
+                <input type="number" id="pointsInput" placeholder="0" min="0" step="1">
+                <span>點</span>
+            </div>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-card">
+                <h2>🎯 系統建議</h2>
+                
+                <div class="badge" id="rangeBadge">您的點數區間</div>
+                
+                <div class="recommendation">
+                    <h3>💡 最佳建議</h3>
+                    <p id="bestRecommendation"></p>
+                </div>
+
+                <div class="status-box" id="statusBox"></div>
+
+                <div class="recommendation">
+                    <h3>📋 次佳選擇</h3>
+                    <p id="secondRecommendation"></p>
+                </div>
+
+                <div class="recommendation">
+                    <h3>💬 兌換策略</h3>
+                    <p id="strategyText"></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h2>📊 完整點數對照表</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>點數範圍</th>
+                        <th>推薦等級</th>
+                        <th>最佳建議</th>
+                        <th>次佳選擇</th>
+                        <th>也可考慮</th>
+                        <th>兌換策略</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 麥當勞點數兌換分析系統 | 僅供參考，實際點數以官方為準</p>
+        </div>
+    </div>
+
+    <script>
+        const rangesData = [
+            {
+                min: 0, max: 149,
+                range: "150點以下",
+                best: "點數不足，建議累積",
+                second: "建議累積到150點",
+                also: "可先存點",
+                strategy: "點數太少，建議累積到150點即可換小杯飲料或甜點",
+                requiredPoints: 150
+            },
+            {
+                min: 150, max: 399,
+                range: "150-399點",
+                best: "小杯飲料／蛋捲冰淇淋",
+                bestDetail: "需要150點",
+                second: "小杯飲料 x2 (300點)",
+                also: "小杯無糖茶 (180點)",
+                strategy: "可換小杯飲料或蛋捲冰淇淋，或累積到400點換薯條",
+                requiredPoints: 150
+            },
+            {
+                min: 400, max: 749,
+                range: "400-749點",
+                best: "薯條（小）",
+                bestDetail: "需要400點",
+                second: "小杯飲料 x2 (300點)",
+                also: "小杯無糖茶 x2 (360點)",
+                strategy: "薯條（小）400點剛剛好，經典配餐首選",
+                requiredPoints: 400
+            },
+            {
+                min: 750, max: 999,
+                range: "750-999點",
+                best: "麥克雞塊（4塊）",
+                bestDetail: "需要750點",
+                second: "薯條（小）x2 (800點)",
+                also: "薯餅 x2 (800點)",
+                strategy: "麥克雞塊（4塊）750點，小份剛好當點心或配餐",
+                requiredPoints: 750
+            },
+            {
+                min: 1000, max: 1499,
+                range: "1000-1499點",
+                best: "勁辣香鷄翅（2塊）",
+                bestDetail: "需要1000點",
+                second: "薯條（大） (1000點)",
+                also: "吉事漢堡 (1000點)",
+                strategy: "勁辣香雞翅或薯條大都是1000點，可依喜好選擇",
+                requiredPoints: 1000
+            },
+            {
+                min: 1500, max: 1649,
+                range: "1500-1649點",
+                best: "麥克雞塊（4塊）x2",
+                bestDetail: "需要1500點",
+                second: "大麥克 (1350點)",
+                also: "勁辣雞腿堡 (1350點)",
+                strategy: "雙份麥克雞塊分享剛好，或選經典主餐",
+                requiredPoints: 1500
+            },
+            {
+                min: 1650, max: 2049,
+                range: "1650-2049點",
+                best: "麥克雞塊（10塊）",
+                bestDetail: "需要1650點",
+                second: "大麥克 + 薯條（小） (1750點)",
+                also: "雙層牛肉堡 (1500點)",
+                strategy: "大份雞塊適合分享，也可自由組合主餐配餐",
+                requiredPoints: 1650
+            },
+            {
+                min: 2050, max: 2699,
+                range: "2050-2699點",
+                best: "麥克雞塊（10塊）+ 薯條（小）",
+                bestDetail: "需要2050點",
+                second: "六塊雞塊套餐 (2100點)",
+                also: "大麥克 + 薯條大 (2350點)",
+                strategy: "接近套餐門檻！可選雞塊+薯條或套餐",
+                requiredPoints: 2050
+            },
+            {
+                min: 2700, max: 5000,
+                range: "2700-5000點",
+                best: "任選套餐",
+                bestDetail: "需要2700點起",
+                second: "套餐 + 薯條（小）",
+                also: "套餐 + 麥克雞塊（4塊）",
+                strategy: "完整套餐最划算！可選單個套餐或套餐+配餐",
+                requiredPoints: 2700
+            },
+            {
+                min: 5001, max: 999999,
+                range: "5000點以上",
+                best: "套餐組合",
+                bestDetail: "(多個套餐或套餐+配餐)",
+                second: "套餐 x2 起",
+                also: "依需求彈性規劃",
+                strategy: "點數充足！建議規劃套餐為主，搭配雞塊薯條更豐富",
+                requiredPoints: 5000
+            }
+        ];
+
+        // 渲染表格
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            rangesData.forEach((data, index) => {
+                const row = document.createElement('tr');
+                row.id = `row-${index}`;
+                row.innerHTML = `
+                    <td><span class="range-badge">${data.range}</span></td>
+                    <td><span class="stars">★★★★★</span></td>
+                    <td><strong>${data.best}</strong><br><small>${data.bestDetail || ''}</small></td>
+                    <td>${data.second}</td>
+                    <td>${data.also}</td>
+                    <td class="strategy">${data.strategy}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // 計算推薦
+        function calculateRecommendation(points) {
+            if (!points || points < 0) {
+                document.getElementById('resultSection').classList.remove('show');
+                clearHighlight();
+                return;
+            }
+
+            const matchedRange = rangesData.find(data => points >= data.min && points <= data.max);
+            
+            if (matchedRange) {
+                // 顯示結果
+                document.getElementById('rangeBadge').textContent = matchedRange.range;
+                
+                const bestText = matchedRange.bestDetail 
+                    ? `${matchedRange.best} - ${matchedRange.bestDetail}`
+                    : matchedRange.best;
+                document.getElementById('bestRecommendation').textContent = bestText;
+                
+                document.getElementById('secondRecommendation').textContent = matchedRange.second;
+                document.getElementById('strategyText').textContent = matchedRange.strategy;
+                
+                // 設定狀態框
+                const statusBox = document.getElementById('statusBox');
+                if (points >= matchedRange.requiredPoints) {
+                    statusBox.textContent = `✅ 點數足夠！可以兌換 ${matchedRange.best}`;
+                    statusBox.className = 'status-box';
+                } else {
+                    const diff = matchedRange.requiredPoints - points;
+                    statusBox.textContent = `還差 ${diff} 點可換 ${matchedRange.best}`;
+                    statusBox.className = 'status-box insufficient';
+                }
+                
+                document.getElementById('resultSection').classList.add('show');
+                
+                // 高亮表格
+                highlightRow(rangesData.indexOf(matchedRange));
+                
+                // 滾動到結果
+                setTimeout(() => {
+                    document.getElementById('resultSection').scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }, 100);
+            }
+        }
+
+        // 高亮表格行
+        function highlightRow(index) {
+            clearHighlight();
+            const row = document.getElementById(`row-${index}`);
+            if (row) {
+                row.classList.add('highlight');
+                row.innerHTML = `<td colspan="6" style="text-align: center; font-size: 1.2em;">
+                    <span class="highlight-marker">👈 您在這裡</span> ${row.innerHTML}
+                </td>`;
+                
+                setTimeout(() => {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            }
+        }
+
+        // 清除高亮
+        function clearHighlight() {
+            renderTable();
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTable();
+            
+            const input = document.getElementById('pointsInput');
+            input.addEventListener('input', function() {
+                const points = parseInt(this.value);
+                calculateRecommendation(points);
+            });
+        });
+    </script>
+</body>
+</html>
